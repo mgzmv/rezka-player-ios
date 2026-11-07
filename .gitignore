@@ -1,0 +1,10 @@
+RezkaPlayer.xcodeproj/
+Config/Info.plist
+build/
+build.log
+Payload/
+*.ipa
+DerivedData/
+.DS_Store
+xcuserdata/
+.swiftpm/

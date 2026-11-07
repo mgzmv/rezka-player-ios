@@ -1,0 +1,81 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate app icon
+        run: python3 scripts/make_icon.py RezkaPlayer/Assets.xcassets/AppIcon.appiconset/icon.png
+
+      - name: Install XcodeGen
+        run: |
+          if ! command -v xcodegen &> /dev/null; then
+            brew install xcodegen
+          fi
+
+      - name: Generate Xcode Project
+        run: xcodegen generate
+
+      - name: Build unsigned iOS App
+        run: |
+          set -o pipefail
+          xcodebuild clean build \
+            -project RezkaPlayer.xcodeproj \
+            -scheme RezkaPlayer \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            2>&1 | tee build.log
+
+      - name: Report compiler errors on failure
+        if: failure()
+        run: |
+          echo "=== XCODEBUILD ERRORS ==="
+          grep -E "(error:|fatal error:)" build.log | head -n 40 | while IFS= read -r line; do
+            echo "::error::$line"
+          done
+          tail -n 80 build.log
+
+      - name: Package IPA for SideStore / AltStore
+        run: |
+          mkdir -p Payload
+          APP_PATH=$(find build/Build/Products/Release-iphoneos -name "RezkaPlayer.app" -type d | head -n 1)
+          echo "Found app at: $APP_PATH"
+          cp -R "$APP_PATH" Payload/
+          zip -r9 RezkaPlayer.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RezkaPlayer-IPA
+          path: RezkaPlayer.ipa
+
+      - name: Publish GitHub Release
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: "Rezka Player v1.0.${{ github.run_number }} (SideStore IPA)"
+          body: |
+            ### 🎬 Rezka Player для iOS (iPhone & iPad)
+            Нативный клиент HDRezka с поддержкой просмотра, фонового скачивания фильмов/сериалов в память устройства, переключения качества (`360p` — `1080p Ultra`), субтитров, выбора озвучки, PiP и обхода защиты Anubis PoW.
+
+            #### 📲 Установка через SideStore / AltStore:
+            1. Скачайте файл **`RezkaPlayer.ipa`** ниже на ваш iPhone или iPad.
+            2. Откройте **SideStore** → вкладка **My Apps** → нажмите **`+`** в верхнем углу и выберите скачанный `RezkaPlayer.ipa`.
+          files: RezkaPlayer.ipa
