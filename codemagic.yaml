@@ -3,7 +3,9 @@ workflows:
     name: Build RezkaPlayer Unsigned IPA (SideStore)
     max_build_duration: 30
     instance_type: mac_mini_m2
-    steps:
+    environment:
+      xcode: latest
+    scripts:
       - name: Generate app icon
         script: |
           python3 scripts/make_icon.py RezkaPlayer/Assets.xcassets/AppIcon.appiconset/icon.png
