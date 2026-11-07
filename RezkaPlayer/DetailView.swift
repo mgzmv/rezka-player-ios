@@ -334,7 +334,8 @@ struct DetailView: View {
         if let local = downloads.completed(media: d.item, season: season, episode: episode) {
             playback = PlaybackContext(
                 media: d.item, translatorID: local.translatorID, season: season, episode: episode,
-                titleText: title, streams: nil, localURL: downloads.localURL(for: local)
+                titleText: title, streams: nil, localURL: downloads.localURL(for: local),
+                details: d, seasons: seasons
             )
             return
         }
@@ -345,7 +346,8 @@ struct DetailView: View {
             let streams = try await RezkaClient.shared.streams(details: d, translator: tr, season: season, episode: episode)
             playback = PlaybackContext(
                 media: d.item, translatorID: tr.id, season: season, episode: episode,
-                titleText: title, streams: streams, localURL: nil
+                titleText: title, streams: streams, localURL: nil,
+                details: d, seasons: seasons
             )
         } catch {
             alertText = error.localizedDescription
