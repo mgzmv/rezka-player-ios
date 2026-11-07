@@ -5,16 +5,26 @@ workflows:
     instance_type: mac_mini_m2
     environment:
       xcode: latest
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: main
+          include: true
+          source: true
     scripts:
       - name: Generate app icon
         script: |
           python3 scripts/make_icon.py RezkaPlayer/Assets.xcassets/AppIcon.appiconset/icon.png
-      - name: Generate Xcode project
+      - name: Generate Xcode project (fast prebuilt XcodeGen)
         script: |
-          if ! command -v xcodegen &> /dev/null; then
-            brew install xcodegen
+          if command -v xcodegen &> /dev/null; then
+            xcodegen generate
+          else
+            curl -fsSL https://github.com/yonaskolb/XcodeGen/releases/latest/download/xcodegen.zip -o xcodegen.zip
+            unzip -q xcodegen.zip
+            ./xcodegen/bin/xcodegen generate
           fi
-          xcodegen generate
       - name: Build unsigned .app
         script: |
           xcodebuild clean build \
