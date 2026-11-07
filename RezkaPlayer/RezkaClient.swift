@@ -302,9 +302,11 @@ final class RezkaClient {
             map[s, default: []].append(Episode(season: s, number: e, title: t.isEmpty ? "Серия \(e)" : t))
         }
         if let sDoc = try? SwiftSoup.parse(seasonsHTML),
-           let items = try? sDoc.select("li[data-tab_id]").array() {
+           let items = try? sDoc.select("li.b-simple_season__item, li[data-tab_id]").array() {
             for li in items {
-                if let s = Int((try? li.attr("data-tab_id")) ?? ""), map[s] == nil { map[s] = [] }
+                let raw = (try? li.attr("data-tab_id")) ?? ""
+                let sub = (try? li.attr("data-tab_sub_id")) ?? ""
+                if let s = Int(raw.isEmpty ? sub : raw), map[s] == nil { map[s] = [] }
             }
         }
         return map.keys.sorted().map { s in
